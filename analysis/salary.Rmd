@@ -11,17 +11,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Baseketballs brooooo
 
-
-```{r}
-library(nbastatR)
-```
-```{r}
-all_nba_players <- nba_players_ids()
-
-nbastatR::assign_nba_players()
-```
-
-
 ```{r}
 library(tidyverse)
 ```
@@ -37,21 +26,30 @@ salary2 <- read_csv("../data/nba-salaries.csv")
 ```
 
 ```{r}
-view(players)
-view(stats.36)
-view(stats.100)
-view(stats.g)
-view(salary)
+stats.g <- stats.g %>%
+  mutate(name = str_replace(Player, "\\*", ""))
+```
+```{r}
+stats.g <- stats.g %>%
+  mutate(key = str_c(name, as.character(year), sep = ""))
+salary2 <- salary2 %>%
+  mutate(key = str_c(name, as.character(season), sep = ""))
+
+salary2
 ```
 
-```{r}
-view(salary2)
-salary2 %>%
-  count(season)
-```
 
 ```{r}
-inner_join(players, salary2, by = "name") %>%
-  count(season)
+final.data <- players %>%
+  inner_join(salary2, by = "name") %>%
+  inner_join(stats.g, by = "key") %>%
+  select(-key) %>%
+  filter(year >= 2017)
+
+write_csv(final.data, "../data/final_data.csv")
+
+final.data
 ```
+
+
 
