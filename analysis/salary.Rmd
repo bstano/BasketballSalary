@@ -11,12 +11,47 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Baseketballs brooooo
 
+
+```{r}
+library(nbastatR)
+```
+```{r}
+all_nba_players <- nba_players_ids()
+
+nbastatR::assign_nba_players()
+```
+
+
 ```{r}
 library(tidyverse)
 ```
 
 ```{r}
-read_csv("")
+players <- read_csv("../data/players.csv")
+stats.36 <- read_csv("../data/PlayerStatisticsPer36Min.csv")
+stats.100 <- read_csv("../data/PlayerStatisticsPer100Poss.csv")
+stats.g <- read_csv("../data/PlayerStatisticsPerGame.csv")
+salary <- read_csv("../data/salaries_1985to2018.csv")
+#new data?
+salary2 <- read_csv("../data/nba-salaries.csv")
 ```
 
+```{r}
+view(players)
+view(stats.36)
+view(stats.100)
+view(stats.g)
+view(salary)
+```
+
+```{r}
+view(salary2)
+salary2 %>%
+  count(season)
+```
+
+```{r}
+inner_join(players, salary2, by = "name") %>%
+  count(season)
+```
 
