@@ -9,11 +9,13 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Baseketballs brooooo
+# Baseketballs Brooooo
 
 ```{r}
 library(tidyverse)
 ```
+
+## Importing Data
 
 ```{r}
 players <- read_csv("../data/players.csv")
@@ -24,6 +26,8 @@ salary <- read_csv("../data/salaries_1985to2018.csv")
 #new data?
 salary2 <- read_csv("../data/nba-salaries.csv")
 ```
+
+## Cleaning and Merging Data
 
 ```{r}
 stats.g <- stats.g %>%
@@ -51,5 +55,21 @@ write_csv(final.data, "../data/final_data.csv")
 final.data
 ```
 
+## Feature Engineering
+
+
+## Modeling
+
+Possible Models:
+
+OLS Regression
+
+WLS Regression
+
+GLM Regression
+
+Regression Trees
+
+Neural Networks
 
 
