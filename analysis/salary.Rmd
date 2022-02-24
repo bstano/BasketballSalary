@@ -42,6 +42,7 @@ salary2 <- salary2 %>%
 salary2
 ```
 
+### Joining the Datasets
 
 ```{r}
 final.data <- players %>%
@@ -52,11 +53,31 @@ final.data <- players %>%
 
 write_csv(final.data, "../data/final_data.csv")
 
-final.data
+head(final.data)
 ```
 
-## Feature Engineering
+### Cleaning the Data
 
+```{r}
+# displaying null values in each column
+final.data %>%
+  map_dbl(~sum(is.na(.))) %>%
+  unname() ->
+na.dbl
+
+na.cols <- data.frame("variable" = colnames(final.data),
+                      "null.count" = na.dbl)
+
+na.cols %>%
+  filter(null.count > 0)
+```
+
+
+## Dimensionality Reduction
+
+### Ridge/LASSO
+
+### Feature Engineering
 
 ## Modeling
 
