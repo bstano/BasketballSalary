@@ -69,6 +69,12 @@ plot(prelim.lm, which = 1)
 plot(prelim.lm, which = 2)
 ```
 
+```{r}
+library(GGally)
+
+ggpairs(prelim.data)
+```
+
 ### Cleaning the Data
 
 ```{r}
