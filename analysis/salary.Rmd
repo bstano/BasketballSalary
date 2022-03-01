@@ -55,6 +55,23 @@ write_csv(final.data, "../data/final_data.csv")
 
 head(final.data)
 ```
+### Deliverabe 2
+```{r}
+final.data %>%
+  mutate(salary)
+```
+
+```{r}
+final.data %>%
+  select(`FG%`, TOV, FG, AST, DRB, salary) ->
+prelim.data
+
+prelim.lm <- lm(salary ~ ., data = prelim.data)
+
+plot(prelim.lm, which = 1)
+
+plot(prelim.lm, which = 2)
+```
 
 ### Cleaning the Data
 
