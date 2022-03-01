@@ -56,10 +56,6 @@ write_csv(final.data, "../data/final_data.csv")
 head(final.data)
 ```
 ### Deliverabe 2
-```{r}
-final.data %>%
-  mutate(salary)
-```
 
 ```{r}
 final.data %>%
