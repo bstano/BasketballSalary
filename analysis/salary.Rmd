@@ -11,50 +11,50 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Baseketballs Brooooo
 
-```{r}
+```{r, message=FALSE}
 library(tidyverse)
 ```
 
 ## Importing Data
 
 ```{r}
-players <- read_csv("../data/players.csv")
-stats.36 <- read_csv("../data/PlayerStatisticsPer36Min.csv")
-stats.100 <- read_csv("../data/PlayerStatisticsPer100Poss.csv")
-stats.g <- read_csv("../data/PlayerStatisticsPerGame.csv")
-salary <- read_csv("../data/salaries_1985to2018.csv")
-#new data?
-salary2 <- read_csv("../data/nba-salaries.csv")
+# players <- read_csv("../data/players.csv")
+# stats.36 <- read_csv("../data/PlayerStatisticsPer36Min.csv")
+# stats.100 <- read_csv("../data/PlayerStatisticsPer100Poss.csv")
+# stats.g <- read_csv("../data/PlayerStatisticsPerGame.csv")
+# # salary <- read_csv("../data/salaries_1985to2018.csv")
+# salary2 <- read_csv("../data/nba-salaries.csv")
 ```
 
 ## Cleaning and Merging Data
 
 ```{r}
-stats.g <- stats.g %>%
-  mutate(name = str_replace(Player, "\\*", ""))
-stats.g <- stats.g %>%
-  mutate(key = str_c(name, as.character(year), sep = ""))
-salary2 <- salary2 %>%
-  mutate(key = str_c(name, as.character(season), sep = ""))
+# stats.g <- stats.g %>%
+#   mutate(name = str_replace(Player, "\\*", ""))
+# stats.g <- stats.g %>%
+#   mutate(key = str_c(name, as.character(year), sep = ""))
+# salary2 <- salary2 %>%
+#   mutate(key = str_c(name, as.character(season), sep = ""))
 ```
 
 ### Joining the Datasets
 
 ```{r}
-final.data <- players %>%
-  inner_join(salary2, by = "name") %>%
-  inner_join(stats.g, by = "key") %>%
-  select(-key) %>%
-  filter(year >= 2017)
+# final.data <- players %>%
+#   inner_join(salary2, by = "name") %>%
+#   inner_join(stats.g, by = "key") %>%
+#   select(-key) %>%
+#   filter(year >= 2017)
+# 
+# write_csv(final.data, "../data/final_data.csv")
 
-write_csv(final.data, "../data/final_data.csv")
-
-head(final.data)
+bdata.raw <- read_csv("../data/final_data.csv")
 ```
+
 ### Deliverabe 2
 
 ```{r}
-final.data %>%
+bdata.raw %>%
   select(`FG%`, TOV, FG, AST, DRB, salary) ->
 prelim.data
 
@@ -65,7 +65,7 @@ plot(prelim.lm, which = 1)
 plot(prelim.lm, which = 2)
 ```
 
-```{r}
+```{r, message=FALSE}
 library(GGally)
 
 ggpairs(prelim.data)
@@ -74,21 +74,72 @@ ggpairs(prelim.data)
 ### Cleaning the Data
 
 ```{r}
+bdata.raw <- read_csv("../data/final_data.csv")
 # displaying null values in each column
-final.data %>%
+bdata.raw %>%
   map_dbl(~sum(is.na(.))) %>%
   unname() ->
 na.dbl
 
-na.cols <- data.frame("variable" = colnames(final.data),
+na.cols <- data.frame("variable" = colnames(bdata.raw),
                       "null.count" = na.dbl)
 
 na.cols %>%
   filter(null.count > 0)
-```
 
+# parsing numbers from difficult columns
+bdata.raw$career_FG3_P <- parse_number(as.character(bdata.raw$`career_FG3%`))
+bdata.raw$career_FG_P <- parse_number(as.character(bdata.raw$`career_FG%`))
+bdata.raw$career_FT_P <- parse_number(as.character(bdata.raw$`career_FT%`))
+# cleaning height
+heights <- str_split(bdata.raw$height, "\\-")
+heights.df <- t(data.frame(heights))
+heights.int <- as.integer(heights.df[,1]) * 12 + as.integer(heights.df[,2])
+bdata.raw$height <- heights.int
+
+bdata.raw %>%
+  mutate(draft_pick = parse_number(draft_pick),
+         draft_round = parse_number(draft_round),
+         shoots_right = ifelse(str_detect(shoots, "Right"),1,0),
+         weight = parse_number(weight),
+         Pos = as.factor(Pos)) %>%
+  rename(career_eFG_P = `career_eFG%`,
+         FG_P = `FG%`,
+         THREEP_P = `3P%`,
+         TWOP_P = `2P%`,
+         eFG_P = `eFG%`,
+         FT_P = `FT%`) %>%
+  select(-birthDate, -birthPlace, -college, -draft_team, -highSchool, -name.x,
+         -position.x, -position.y, -team, -Player, -name.y, -season, -Tm,
+         -`career_FG3%`, -`career_FG%`, -`career_FT%`, -shoots) %>%
+  na.omit() ->
+bdata.clean
+
+bdata.clean %>%
+  select(-`_id`) ->
+bdata.model
+```
+## Variables Names
+
+ - **salary**: player salary 
 
 ## Dimensionality Reduction
+
+```{r}
+ols.init <- glm(salary ~ ., data = bdata.model)
+
+summary(ols.init)
+```
+
+```{r, message=FALSE}
+library(klaR)
+library(car)
+
+cond.index(ols.init, bdata.model)
+
+vif(ols.init)
+```
+
 
 ### Ridge/LASSO
 
