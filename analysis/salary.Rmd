@@ -32,8 +32,6 @@ salary2 <- read_csv("../data/nba-salaries.csv")
 ```{r}
 stats.g <- stats.g %>%
   mutate(name = str_replace(Player, "\\*", ""))
-```
-```{r}
 stats.g <- stats.g %>%
   mutate(key = str_c(name, as.character(year), sep = ""))
 salary2 <- salary2 %>%
