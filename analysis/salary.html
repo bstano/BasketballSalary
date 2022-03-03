@@ -245,27 +245,11 @@ salary2 &lt;- read_csv(&quot;../data/nba-salaries.csv&quot;)</code></pre>
 <div id="cleaning-and-merging-data" class="section level2">
 <h2>Cleaning and Merging Data</h2>
 <pre class="r"><code>stats.g &lt;- stats.g %&gt;%
-  mutate(name = str_replace(Player, &quot;\\*&quot;, &quot;&quot;))</code></pre>
-<pre class="r"><code>stats.g &lt;- stats.g %&gt;%
+  mutate(name = str_replace(Player, &quot;\\*&quot;, &quot;&quot;))
+stats.g &lt;- stats.g %&gt;%
   mutate(key = str_c(name, as.character(year), sep = &quot;&quot;))
 salary2 &lt;- salary2 %&gt;%
-  mutate(key = str_c(name, as.character(season), sep = &quot;&quot;))
-
-salary2</code></pre>
-<pre><code>## # A tibble: 9,456 x 7
-##     rank name             position team                     salary season key   
-##    &lt;dbl&gt; &lt;chr&gt;            &lt;chr&gt;    &lt;chr&gt;                     &lt;dbl&gt;  &lt;dbl&gt; &lt;chr&gt; 
-##  1     1 Shaquille O&#39;Neal C        Los Angeles Lakers     17142000   2000 Shaqu~
-##  2     2 Kevin Garnett    PF       Minnesota Timberwolves 16806000   2000 Kevin~
-##  3     3 Alonzo Mourning  C        Miami Heat             15004000   2000 Alonz~
-##  4     4 Juwan Howard     PF       Washington Wizards     15000000   2000 Juwan~
-##  5     5 Scottie Pippen   SF       Portland Trail Blazers 14795000   2000 Scott~
-##  6     6 Karl Malone      PF       Utah Jazz              14000000   2000 Karl ~
-##  7     7 Larry Johnson    F        New York Knicks        11910000   2000 Larry~
-##  8     8 Gary Payton      PG       Seattle SuperSonics    11020000   2000 Gary ~
-##  9     9 Rasheed Wallace  PF       Portland Trail Blazers 10800000   2000 Rashe~
-## 10    10 Shawn Kemp       C        Cleveland Cavaliers    10780000   2000 Shawn~
-## # ... with 9,446 more rows</code></pre>
+  mutate(key = str_c(name, as.character(season), sep = &quot;&quot;))</code></pre>
 <div id="joining-the-datasets" class="section level3">
 <h3>Joining the Datasets</h3>
 <pre class="r"><code>final.data &lt;- players %&gt;%

@@ -36,8 +36,6 @@ stats.g <- stats.g %>%
   mutate(key = str_c(name, as.character(year), sep = ""))
 salary2 <- salary2 %>%
   mutate(key = str_c(name, as.character(season), sep = ""))
-
-salary2
 ```
 
 ### Joining the Datasets
