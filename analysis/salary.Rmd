@@ -166,6 +166,15 @@ plot(ols.log, which = 1)
 
 plot(ols.log, which = 2)
 ```
+## Pieceise Model
+
+```{r}
+fit.piecewise = lm(log_salary ~ . - salary - year + I((year-2013) * (year>2013)), data=bdata.model)
+
+summary(fit.piecewise)
+
+plot(fit.piecewise, which = c(1, 2))
+```
 
 
 ### Ridge/LASSO
@@ -184,6 +193,6 @@ GLM Regression
 
 Regression Trees
 
-Neural Networks
+Splines
 
 
