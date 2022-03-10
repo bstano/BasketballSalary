@@ -119,6 +119,11 @@ bdata.clean %>%
   select(-`_id`) ->
 bdata.model
 ```
+
+```{r}
+levels(bdata.model$Pos)
+```
+
 ## Variables Names
 
  - **salary**: player salary 
@@ -129,6 +134,10 @@ bdata.model
 ols.init <- glm(salary ~ ., data = bdata.model)
 
 summary(ols.init)
+
+plot(ols.init, which = 1)
+
+plot(ols.init, which = 2)
 ```
 
 ```{r, message=FALSE}
@@ -138,6 +147,24 @@ library(car)
 cond.index(ols.init, bdata.model)
 
 vif(ols.init)
+```
+
+## Transforming the Respsonse Variable
+
+```{r}
+bdata.model %>%
+  mutate(log_salary = log(salary)) -> 
+bdata.model
+```
+
+```{r}
+ols.log <- glm(log_salary ~ . - salary, data = bdata.model)
+
+summary(ols.log)
+
+plot(ols.log, which = 1)
+
+plot(ols.log, which = 2)
 ```
 
 
