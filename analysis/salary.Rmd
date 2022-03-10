@@ -86,7 +86,11 @@ bdata.raw %>%
   rename(career_eFG_P = `career_eFG%`,
          FG_P = `FG%`,
          THREEP_P = `3P%`,
+         THREEP = `3P`,
+         THREEP_A = `3PA`,
          TWOP_P = `2P%`,
+         TWOP = `2P`,
+         TWOP_A = `2PA`,
          eFG_P = `eFG%`,
          FT_P = `FT%`) %>%
   select(-birthDate, -birthPlace, -college, -draft_team, -highSchool, -name.x,
@@ -100,9 +104,6 @@ bdata.clean %>%
 bdata.model
 ```
 
-```{r}
-levels(bdata.model$Pos)
-```
 
 ## Variables Names
 
@@ -121,10 +122,10 @@ plot(ols.init, which = 2)
 ```
 
 ```{r, message=FALSE}
-library(klaR)
+# library(klaR)
 library(car)
 
-cond.index(ols.init, bdata.model)
+# cond.index(ols.init, bdata.model)
 
 vif(ols.init)
 ```
@@ -146,11 +147,141 @@ summary(ols.log)
 
 plot(ols.log, which = c(1, 2))
 
-cond.index(ols.log, bdata.log)
+# cond.index(ols.log, bdata.log)
 
 vif(ols.log)
 ```
-## Pieceise Model
+## Feature Selection
+
+```{r}
+vifs <- data.frame(vif(ols.log))
+
+vifs %>%
+  filter(GVIF > 1000) ->
+vif.1000
+
+drop.vars <- c(rownames(vif.1000))
+
+bdata.log %>%
+  select(-drop.vars) ->
+bdata.log2
+```
+
+### Refitting
+
+```{r}
+ols.log2 <- glm(log_salary ~ ., data = bdata.log2)
+
+summary(ols.log2)
+
+plot(ols.log2, which = c(1, 2))
+
+vif(ols.log2)
+```
+```{r}
+vifs2 <- data.frame(vif(ols.log2))
+
+vifs2 %>%
+  filter(GVIF > 50) ->
+vif.50
+
+drop.vars <- c(rownames(vif.50))
+
+bdata.log2 %>%
+  select(-drop.vars) ->
+bdata.log3
+```
+
+### Refitting Again
+
+```{r}
+ols.log3 <- glm(log_salary ~ ., data = bdata.log3)
+
+summary(ols.log3)
+
+plot(ols.log3, which = c(1, 2))
+
+vif(ols.log3)
+```
+
+```{r}
+vifs3 <- data.frame(vif(ols.log3))
+
+vifs3 %>%
+  filter(GVIF > 20) ->
+vif.20
+
+drop.vars <- c(rownames(vif.20))
+
+bdata.log3 %>%
+  select(-drop.vars) ->
+bdata.log4
+```
+
+### Refitting AGAIN AGAIN
+
+```{r}
+ols.log4 <- glm(log_salary ~ ., data = bdata.log4)
+
+summary(ols.log4)
+
+plot(ols.log4, which = c(1, 2))
+
+vif(ols.log4)
+```
+
+```{r}
+vifs4 <- data.frame(vif(ols.log4))
+
+vifs4 %>%
+  filter(`vif.ols.log4.` > 12) ->
+vif.12
+
+drop.vars <- c(rownames(vif.12))
+
+bdata.log4 %>%
+  select(-drop.vars) ->
+bdata.log5
+```
+
+### Final Fitting
+
+```{r}
+ols.log5 <- glm(log_salary ~ ., data = bdata.log5)
+
+# summary(ols.log5)
+
+plot(ols.log5, which = c(1, 2))
+
+vif(ols.log5)
+```
+
+## Feature Selection Use Stepwise Function
+
+```{r}
+fit.large <- glm(log_salary ~ ., data = bdata.log)
+
+fit.small <- glm(log_salary ~ 1, data = bdata.log)
+
+fit.step <- step(fit.large, fit.small)
+```
+
+```{r}
+vars.vif <- names(vif(ols.log5))
+                  
+vars.step <- names(fit.step$coefficients)[-1]
+
+vars.step
+map(vars.step, function(.) . %in% vars.vif)
+
+summary(ols.log5)
+
+vars.step
+summary(fit.step)
+```
+
+
+## Pieceise Model (Ignore this for now)
 
 ```{r}
 fit.piecewise = lm(log_salary ~ . + I((year-2013) * (year>2013)), data = bdata.log)
