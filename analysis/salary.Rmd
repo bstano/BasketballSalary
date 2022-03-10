@@ -51,26 +51,6 @@ library(tidyverse)
 bdata.raw <- read_csv("../data/final_data.csv")
 ```
 
-### Deliverabe 2
-
-```{r}
-bdata.raw %>%
-  select(`FG%`, TOV, FG, AST, DRB, salary) ->
-prelim.data
-
-prelim.lm <- lm(salary ~ ., data = prelim.data)
-
-plot(prelim.lm, which = 1)
-
-plot(prelim.lm, which = 2)
-```
-
-```{r, message=FALSE}
-library(GGally)
-
-ggpairs(prelim.data)
-```
-
 ### Cleaning the Data
 
 ```{r}
@@ -154,22 +134,26 @@ vif(ols.init)
 ```{r}
 bdata.model %>%
   mutate(log_salary = log(salary)) -> 
-bdata.model
+bdata.log
+
+bdata.log$salary <- NULL
 ```
 
 ```{r}
-ols.log <- glm(log_salary ~ . - salary, data = bdata.model)
+ols.log <- glm(log_salary ~ ., data = bdata.log)
 
 summary(ols.log)
 
-plot(ols.log, which = 1)
+plot(ols.log, which = c(1, 2))
 
-plot(ols.log, which = 2)
+cond.index(ols.log, bdata.log)
+
+vif(ols.log)
 ```
 ## Pieceise Model
 
 ```{r}
-fit.piecewise = lm(log_salary ~ . - salary - year + I((year-2013) * (year>2013)), data=bdata.model)
+fit.piecewise = lm(log_salary ~ . + I((year-2013) * (year>2013)), data = bdata.log)
 
 summary(fit.piecewise)
 
