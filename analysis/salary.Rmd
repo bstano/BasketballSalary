@@ -112,7 +112,7 @@ bdata.model
 ## Dimensionality Reduction
 
 ```{r}
-ols.init <- glm(salary ~ ., data = bdata.model)
+ols.init <- lm(salary ~ ., data = bdata.model)
 
 summary(ols.init)
 
@@ -141,7 +141,7 @@ bdata.log$salary <- NULL
 ```
 
 ```{r}
-ols.log <- glm(log_salary ~ ., data = bdata.log)
+ols.log <- lm(log_salary ~ ., data = bdata.log)
 
 summary(ols.log)
 
@@ -170,7 +170,7 @@ bdata.log2
 ### Refitting
 
 ```{r}
-ols.log2 <- glm(log_salary ~ ., data = bdata.log2)
+ols.log2 <- lm(log_salary ~ ., data = bdata.log2)
 
 summary(ols.log2)
 
@@ -195,7 +195,7 @@ bdata.log3
 ### Refitting Again
 
 ```{r}
-ols.log3 <- glm(log_salary ~ ., data = bdata.log3)
+ols.log3 <- lm(log_salary ~ ., data = bdata.log3)
 
 summary(ols.log3)
 
@@ -221,7 +221,7 @@ bdata.log4
 ### Refitting AGAIN AGAIN
 
 ```{r}
-ols.log4 <- glm(log_salary ~ ., data = bdata.log4)
+ols.log4 <- lm(log_salary ~ ., data = bdata.log4)
 
 summary(ols.log4)
 
@@ -247,9 +247,9 @@ bdata.log5
 ### Final Fitting
 
 ```{r}
-ols.log5 <- glm(log_salary ~ ., data = bdata.log5)
+ols.log5 <- lm(log_salary ~ ., data = bdata.log5)
 
-# summary(ols.log5)
+summary(ols.log5)
 
 plot(ols.log5, which = c(1, 2))
 
@@ -259,27 +259,75 @@ vif(ols.log5)
 ## Feature Selection Use Stepwise Function
 
 ```{r}
-fit.large <- glm(log_salary ~ ., data = bdata.log)
+fit.large <- lm(log_salary ~ ., data = bdata.log)
 
-fit.small <- glm(log_salary ~ 1, data = bdata.log)
+fit.small <- lm(log_salary ~ 1, data = bdata.log)
 
 fit.step <- step(fit.large, fit.small)
 ```
 
+### Two Feature Sets
+
 ```{r}
 vars.vif <- names(vif(ols.log5))
-                  
+bdata.vif <- bdata.log5
+
 vars.step <- names(fit.step$coefficients)[-1]
-
-vars.step
-map(vars.step, function(.) . %in% vars.vif)
-
-summary(ols.log5)
-
-vars.step
-summary(fit.step)
+bdata.log %>%
+  select(c(vars.step, log_salary)) ->
+bdata.step
 ```
 
+## Validating Between the Two Feature Sets
+
+Let's do an anova on the ols model fitting all features and the 2 feature set models
+
+```{r}
+anova(ols.log, ols.log5)
+
+anova(ols.log, fit.step)
+```
+
+Both models are not significant worse than the model fit on all predictors
+
+
+Let's do another anova on the feature set models and a small model fit only on the predictors they share
+
+```{r}
+vars.share <- c()
+for (i in vars.step) {
+  if (i %in% vars.vif) {
+    vars.share <- c(vars.share, i)
+  } else {
+    print(i)
+  }
+}
+vars.share
+
+bdata.log %>%
+  select(c(vars.share, log_salary)) ->
+bdata.share
+
+ols.share <- lm(log_salary ~ career_PER + career_PTS + career_TRB + career_WS + 
+    draft_round + draft_year + rank + G + TWOP_P + AST + TOV + PF + year, data = bdata.share)
+
+
+anova(ols.share, fit.step)
+
+anova(ols.share, ols.log5)
+```
+
+The step variables model has slight significant anova results, but not by much.
+
+The vif variable models is not significantly better than the shared model
+
+Let's do CV on the step, vif, and shared feature subsets to see which is the best at prediction
+
+### Cross Validation
+
+```{r}
+
+```
 
 ## Pieceise Model (Ignore this for now)
 
