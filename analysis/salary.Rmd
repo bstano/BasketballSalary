@@ -474,6 +474,8 @@ Since the ANOVA test is insignificant, the simpler model is preferred.
 
 ```{r}
 summary(ols.share2)
+
+plot(ols.share2, which = c(1,2))
 ```
 
 
