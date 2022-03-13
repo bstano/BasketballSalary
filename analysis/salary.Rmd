@@ -105,11 +105,8 @@ bdata.model
 ```
 
 
-## Variables Names
 
- - **salary**: player salary 
-
-## Dimensionality Reduction
+## Transforming the Response Variable
 
 ```{r}
 ols.init <- lm(salary ~ ., data = bdata.model)
@@ -130,7 +127,6 @@ library(car)
 vif(ols.init)
 ```
 
-## Transforming the Respsonse Variable
 
 ```{r}
 bdata.model %>%
@@ -139,7 +135,7 @@ bdata.log
 
 bdata.log$salary <- NULL
 ```
-
+ 
 
 ```{r}
 ols.log0 <- lm(log_salary ~ ., data = bdata.log)
@@ -170,7 +166,7 @@ plot(ols.log, which = c(1, 2))
 vif(ols.log)
 ```
 
-## Feature Selection
+## Feature Selection Through VIF
 
 ```{r}
 vifs <- data.frame(vif(ols.log))
@@ -186,7 +182,7 @@ bdata.log.rm %>%
 bdata.log2
 ```
 
-### Refitting
+#### VIF Refitting
 
 ```{r}
 ols.log2 <- lm(log_salary ~ ., data = bdata.log2)
@@ -211,7 +207,7 @@ bdata.log2 %>%
 bdata.log3
 ```
 
-### Refitting Again
+#### VIF Refitting Again
 
 ```{r}
 ols.log3 <- lm(log_salary ~ ., data = bdata.log3)
@@ -237,7 +233,7 @@ bdata.log3 %>%
 bdata.log4
 ```
 
-### Refitting AGAIN AGAIN
+#### VIF Refitting AGAIN AGAIN
 
 ```{r}
 ols.log4 <- lm(log_salary ~ ., data = bdata.log4)
@@ -265,7 +261,7 @@ bdata.log5
 bdata.vif <- bdata.log5
 ```
 
-### Final Fitting
+#### VIF Final Fitting
 
 ```{r}
 ols.log5 <- lm(log_salary ~ ., data = bdata.vif)
@@ -300,7 +296,7 @@ bdata.log %>%
 bdata.step
 ```
 
-## Validating Between the Two Feature Sets
+## Validating Between the Feature Sets
 
 Let's do an anova on the ols model fitting all features and the 2 feature set models
 
@@ -312,6 +308,7 @@ anova(ols.log, fit.step)
 
 Both models are not significant worse than the model fit on all predictors
 
+### Creating the Shared Feature Set
 
 Let's do another anova on the feature set models and a small model fit only on the predictors they share
 
@@ -345,7 +342,7 @@ The vif variable models is not significantly better than the shared model
 
 Let's do CV on the step, vif, and shared feature subsets to see which is the best at prediction
 
-### Cross Validation
+### Cross Validation between Feature Sets
 
 ```{r}
 library(boot)
@@ -421,6 +418,8 @@ bdata.step.wls$wts.step <- wts.step
 cv.wls.step <- cv.glm(bdata.step.wls, wls.step)
 ```
 
+### CV Results between Models and Feature Sets
+
 ```{r}
 cbind("WLS Share" = cv.wls.share$delta, "OLS Share" = cv.share$delta,
       "WLS VIF" = cv.wls.vif$delta, "OLS VIF" = cv.vif$delta,
@@ -436,6 +435,19 @@ Traditional OLS using the Shared Features is still producing the best CV results
 library(tree)
 
 tree.share <- tree(log_salary ~ ., bdata.share)
+
+# cv.tree(tree.share, k = nrow(bdata.share))
+```
+
+# Feature Sets Summary
+
+```{r}
+print("Shared Features")
+vars.share
+print("Step Features")
+vars.step
+print("VIF Features")
+vars.vif
 ```
 
 # Conclusion
@@ -446,11 +458,11 @@ OLS with the Shared Feature set was the model with the best CV results
 summary(ols.share)
 ```
 
-## Should We Remove the insignificant variables
+## Should We Remove the insignificant variables?
 
 ```{r}
 bdata.share %>%
-  select(-TWOP_P, -career_FG3_P, -BLK) ->
+  select(-TWOP_P, -career_PTS, -career_TRB, -career_FG3_P, -career_eFG_P, -BLK) ->
 bdata.share2
 
 ols.share2 <- glm(log_salary ~ ., data = bdata.share2)
@@ -480,15 +492,6 @@ plot(ols.share2, which = c(1,2))
 
 
 
-## Pieceise Model (Ignore this for now)
-
-```{r}
-fit.piecewise = lm(log_salary ~ . + I((year-2013) * (year>2013)), data = bdata.log)
-
-summary(fit.piecewise)
-
-plot(fit.piecewise, which = c(1, 2))
-```
 
 
 
