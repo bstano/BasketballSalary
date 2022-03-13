@@ -438,6 +438,44 @@ library(tree)
 tree.share <- tree(log_salary ~ ., bdata.share)
 ```
 
+# Conclusion
+
+OLS with the Shared Feature set was the model with the best CV results
+
+```{r}
+summary(ols.share)
+```
+
+## Should We Remove the insignificant variables
+
+```{r}
+bdata.share %>%
+  select(-TWOP_P, -career_FG3_P, -BLK) ->
+bdata.share2
+
+ols.share2 <- glm(log_salary ~ ., data = bdata.share2)
+
+lm.share <- lm(log_salary ~ ., data = bdata.share)
+lm.share2 <- lm(log_salary ~ ., data = bdata.share2)
+
+
+anova(lm.share2, lm.share)
+
+cv.ols.share2 <- cv.glm(bdata.share2, ols.share2)
+
+cbind("Share" = cv.share$delta, "Share2" = cv.share$delta)
+```
+
+The OLS fit on the smaller subset of the shared features, with the insignificant predictors removed, has the exact same CV results as the OLS fit on the fully shared features.
+
+Since the ANOVA test is insignificant, the simpler model is preferred.
+
+# Final Model
+
+```{r}
+summary(ols.share2)
+```
+
 
 
 ## Pieceise Model (Ignore this for now)

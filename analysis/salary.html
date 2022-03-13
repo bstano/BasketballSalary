@@ -2297,6 +2297,123 @@ cv.wls.step &lt;- cv.glm(bdata.step.wls, wls.step)</code></pre>
 ##   print.tree cli</code></pre>
 <pre class="r"><code>tree.share &lt;- tree(log_salary ~ ., bdata.share)</code></pre>
 </div>
+</div>
+<div id="conclusion" class="section level1">
+<h1>Conclusion</h1>
+<p>OLS with the Shared Feature set was the model with the best CV results</p>
+<pre class="r"><code>summary(ols.share)</code></pre>
+<pre><code>## 
+## Call:
+## glm(formula = log_salary ~ ., data = bdata.share)
+## 
+## Deviance Residuals: 
+##      Min        1Q    Median        3Q       Max  
+## -2.10067  -0.07865   0.00357   0.07824   0.80357  
+## 
+## Coefficients:
+##                Estimate Std. Error  t value Pr(&gt;|t|)    
+## (Intercept)  -1.796e+02  1.152e+01  -15.597  &lt; 2e-16 ***
+## career_PER   -1.252e-02  3.709e-03   -3.374 0.000759 ***
+## career_PTS    1.599e-03  2.784e-03    0.574 0.565853    
+## career_TRB   -8.284e-03  5.090e-03   -1.627 0.103882    
+## career_WS     3.049e-03  3.754e-04    8.121 9.67e-16 ***
+## career_eFG_P -1.507e-03  1.925e-03   -0.783 0.433847    
+## draft_round   1.326e-01  1.334e-02    9.939  &lt; 2e-16 ***
+## draft_year    8.342e-03  1.979e-03    4.216 2.64e-05 ***
+## rank         -8.215e-03  5.137e-05 -159.911  &lt; 2e-16 ***
+## G             1.485e-03  3.040e-04    4.886 1.14e-06 ***
+## THREEP_P     -2.080e-01  6.114e-02   -3.402 0.000688 ***
+## TWOP_P       -9.227e-02  8.268e-02   -1.116 0.264587    
+## AST          -2.545e-02  7.078e-03   -3.595 0.000335 ***
+## BLK           4.230e-02  2.131e-02    1.985 0.047330 *  
+## TOV           8.672e-02  1.841e-02    4.711 2.69e-06 ***
+## PF           -3.720e-02  1.239e-02   -3.003 0.002722 ** 
+## year          8.915e-02  5.885e-03   15.148  &lt; 2e-16 ***
+## career_FG3_P  1.403e-03  1.057e-03    1.327 0.184780    
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for gaussian family taken to be 0.05211769)
+## 
+##     Null deviance: 2262.206  on 1496  degrees of freedom
+## Residual deviance:   77.082  on 1479  degrees of freedom
+## AIC: -154.32
+## 
+## Number of Fisher Scoring iterations: 2</code></pre>
+<div id="should-we-remove-the-insignificant-variables" class="section level2">
+<h2>Should We Remove the insignificant variables</h2>
+<pre class="r"><code>bdata.share %&gt;%
+  select(-TWOP_P, -career_FG3_P, -BLK) -&gt;
+bdata.share2
+
+ols.share2 &lt;- glm(log_salary ~ ., data = bdata.share2)
+
+lm.share &lt;- lm(log_salary ~ ., data = bdata.share)
+lm.share2 &lt;- lm(log_salary ~ ., data = bdata.share2)
+
+
+anova(lm.share2, lm.share)</code></pre>
+<pre><code>## Analysis of Variance Table
+## 
+## Model 1: log_salary ~ career_PER + career_PTS + career_TRB + career_WS + 
+##     career_eFG_P + draft_round + draft_year + rank + G + THREEP_P + 
+##     AST + TOV + PF + year
+## Model 2: log_salary ~ career_PER + career_PTS + career_TRB + career_WS + 
+##     career_eFG_P + draft_round + draft_year + rank + G + THREEP_P + 
+##     TWOP_P + AST + BLK + TOV + PF + year + career_FG3_P
+##   Res.Df    RSS Df Sum of Sq      F  Pr(&gt;F)  
+## 1   1482 77.432                              
+## 2   1479 77.082  3   0.35019 2.2397 0.08188 .
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre class="r"><code>cv.ols.share2 &lt;- cv.glm(bdata.share2, ols.share2)
+
+cbind(&quot;Share&quot; = cv.share$delta, &quot;Share2&quot; = cv.share$delta)</code></pre>
+<pre><code>##           Share     Share2
+## [1,] 0.05380634 0.05380634
+## [2,] 0.05380555 0.05380555</code></pre>
+<p>The OLS fit on the smaller subset of the shared features, with the insignificant predictors removed, has the exact same CV results as the OLS fit on the fully shared features.</p>
+<p>Since the ANOVA test is insignificant, the simpler model is preferred.</p>
+</div>
+</div>
+<div id="final-model" class="section level1">
+<h1>Final Model</h1>
+<pre class="r"><code>summary(ols.share2)</code></pre>
+<pre><code>## 
+## Call:
+## glm(formula = log_salary ~ ., data = bdata.share2)
+## 
+## Deviance Residuals: 
+##      Min        1Q    Median        3Q       Max  
+## -2.13263  -0.07761   0.00344   0.07884   0.81193  
+## 
+## Coefficients:
+##                Estimate Std. Error  t value Pr(&gt;|t|)    
+## (Intercept)  -1.784e+02  1.140e+01  -15.643  &lt; 2e-16 ***
+## career_PER   -1.318e-02  3.438e-03   -3.834 0.000131 ***
+## career_PTS    2.677e-03  2.484e-03    1.077 0.281458    
+## career_TRB   -6.569e-03  4.817e-03   -1.364 0.172866    
+## career_WS     3.064e-03  3.757e-04    8.155 7.35e-16 ***
+## career_eFG_P -1.513e-03  1.751e-03   -0.864 0.387886    
+## draft_round   1.344e-01  1.331e-02   10.097  &lt; 2e-16 ***
+## draft_year    8.723e-03  1.967e-03    4.436 9.86e-06 ***
+## rank         -8.231e-03  5.095e-05 -161.547  &lt; 2e-16 ***
+## G             1.460e-03  3.005e-04    4.857 1.32e-06 ***
+## THREEP_P     -1.656e-01  5.341e-02   -3.100 0.001973 ** 
+## AST          -2.631e-02  6.945e-03   -3.788 0.000158 ***
+## TOV           8.596e-02  1.818e-02    4.727 2.49e-06 ***
+## PF           -3.200e-02  1.191e-02   -2.687 0.007285 ** 
+## year          8.816e-02  5.844e-03   15.085  &lt; 2e-16 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for gaussian family taken to be 0.05224848)
+## 
+##     Null deviance: 2262.206  on 1496  degrees of freedom
+## Residual deviance:   77.432  on 1482  degrees of freedom
+## AIC: -153.54
+## 
+## Number of Fisher Scoring iterations: 2</code></pre>
 <div id="pieceise-model-ignore-this-for-now" class="section level2">
 <h2>Pieceise Model (Ignore this for now)</h2>
 <pre class="r"><code>fit.piecewise = lm(log_salary ~ . + I((year-2013) * (year&gt;2013)), data = bdata.log)
