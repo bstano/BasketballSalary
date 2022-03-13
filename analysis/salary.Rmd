@@ -242,6 +242,8 @@ drop.vars <- c(rownames(vif.12))
 bdata.log4 %>%
   select(-drop.vars) ->
 bdata.log5
+
+bdata.vif <- bdata.log5
 ```
 
 ### Final Fitting
@@ -326,8 +328,92 @@ Let's do CV on the step, vif, and shared feature subsets to see which is the bes
 ### Cross Validation
 
 ```{r}
+library(boot)
 
+ols.share <- glm(log_salary ~ ., data = bdata.share)
+
+ols.vif <- glm(log_salary ~ ., data = bdata.vif)
+
+ols.step <- glm(log_salary ~ ., data = bdata.step)
+
+cv.share <- cv.glm(bdata.share, ols.share)
+
+cv.vif <- cv.glm(bdata.vif, ols.vif)
+
+cv.step <- cv.glm(bdata.step, ols.step)
+
+c("Shared" = cv.share$delta[1], "VIF" = cv.vif$delta[1], "Step" = cv.step$delta[1])
 ```
+
+The Shared data set actually had better cross validation results, though the set selected by step was quite close.
+
+## Weighted Least Squares Regression
+
+```{r}
+# Shares Features
+glm.share <- glm(log_salary ~ ., data= bdata.share)
+
+glm.abs.res <- glm(abs(residuals(glm.share)) ~ fitted(glm.share))
+
+wts.share <- 1/fitted(glm.abs.res)^2
+
+bdata.share.wls <- bdata.share
+
+wls.share <- glm(log_salary ~ ., data = bdata.share.wls, weights = wts.share)
+
+bdata.share.wls$wts.share <- wts.share
+
+cv.wls.share <- cv.glm(bdata.share.wls, wls.share)
+```
+
+```{r}
+# VIF Features
+glm.vif <- glm(log_salary ~ ., data= bdata.vif)
+
+glm.abs.res <- glm(abs(residuals(glm.vif)) ~ fitted(glm.vif))
+
+wts.vif <- 1/fitted(glm.abs.res)^2
+
+bdata.vif.wls <- bdata.vif
+
+wls.vif <- glm(log_salary ~ ., data = bdata.vif, weights = wts.vif)
+
+bdata.vif.wls$wts.vif <- wts.vif
+
+cv.wls.vif <- cv.glm(bdata.vif.wls, wls.vif)
+```
+
+```{r}
+# Step Features
+
+glm.step <- glm(log_salary ~ ., data= bdata.step)
+
+glm.abs.res <- glm(abs(residuals(glm.step))~fitted(glm.step))
+
+wts.step <- 1/fitted(glm.abs.res)^2
+
+bdata.step.wls <- bdata.step
+
+wls.step <- glm(log_salary ~ ., data = bdata.step, weights=wts.step)
+
+bdata.step.wls$wts.step <- wts.step
+
+cv.wls.step <- cv.glm(bdata.step.wls, wls.step)
+```
+
+```{r}
+cbind("WLS Share" = cv.wls.share$delta, "OLS Share" = cv.share$delta,
+      "WLS VIF" = cv.wls.vif$delta, "OLS VIF" = cv.vif$delta,
+      "WLS Step" = cv.wls.step$delta, "OLS Step" = cv.step$delta)
+```
+
+
+Traditional OLS using the Shared Features is still producing the best CV results
+
+## Regression Trees
+
+
+
 
 ## Pieceise Model (Ignore this for now)
 

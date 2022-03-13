@@ -918,7 +918,9 @@ drop.vars &lt;- c(rownames(vif.12))
 
 bdata.log4 %&gt;%
   select(-drop.vars) -&gt;
-bdata.log5</code></pre>
+bdata.log5
+
+bdata.vif &lt;- bdata.log5</code></pre>
 </div>
 <div id="final-fitting" class="section level3">
 <h3>Final Fitting</h3>
@@ -2322,7 +2324,85 @@ anova(ols.share, fit.step)</code></pre>
 <p>Let’s do CV on the step, vif, and shared feature subsets to see which is the best at prediction</p>
 <div id="cross-validation" class="section level3">
 <h3>Cross Validation</h3>
+<pre class="r"><code>library(boot)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;boot&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:car&#39;:
+## 
+##     logit</code></pre>
+<pre class="r"><code>ols.share &lt;- glm(log_salary ~ ., data = bdata.share)
+
+ols.vif &lt;- glm(log_salary ~ ., data = bdata.vif)
+
+ols.step &lt;- glm(log_salary ~ ., data = bdata.step)
+
+cv.share &lt;- cv.glm(bdata.share, ols.share)
+
+cv.vif &lt;- cv.glm(bdata.vif, ols.vif)
+
+cv.step &lt;- cv.glm(bdata.step, ols.step)
+
+c(&quot;Shared&quot; = cv.share$delta[1], &quot;VIF&quot; = cv.vif$delta[1], &quot;Step&quot; = cv.step$delta[1])</code></pre>
+<pre><code>##     Shared        VIF       Step 
+## 0.07388424 0.07585092 0.07389762</code></pre>
+<p>The Shared data set actually had better cross validation results, though the set selected by step was quite close.</p>
 </div>
+</div>
+<div id="weighted-least-squares-regression" class="section level2">
+<h2>Weighted Least Squares Regression</h2>
+<pre class="r"><code># Shares Features
+glm.share &lt;- glm(log_salary ~ ., data= bdata.share)
+
+glm.abs.res &lt;- glm(abs(residuals(glm.share)) ~ fitted(glm.share))
+
+wts.share &lt;- 1/fitted(glm.abs.res)^2
+
+bdata.share.wls &lt;- bdata.share
+
+wls.share &lt;- glm(log_salary ~ ., data = bdata.share.wls, weights = wts.share)
+
+bdata.share.wls$wts.share &lt;- wts.share
+
+cv.wls.share &lt;- cv.glm(bdata.share.wls, wls.share)</code></pre>
+<pre class="r"><code># VIF Features
+glm.vif &lt;- glm(log_salary ~ ., data= bdata.vif)
+
+glm.abs.res &lt;- glm(abs(residuals(glm.vif)) ~ fitted(glm.vif))
+
+wts.vif &lt;- 1/fitted(glm.abs.res)^2
+
+bdata.vif.wls &lt;- bdata.vif
+
+wls.vif &lt;- glm(log_salary ~ ., data = bdata.vif, weights = wts.vif)
+
+bdata.vif.wls$wts.vif &lt;- wts.vif
+
+cv.wls.vif &lt;- cv.glm(bdata.vif.wls, wls.vif)</code></pre>
+<pre class="r"><code># Step Features
+
+glm.step &lt;- glm(log_salary ~ ., data= bdata.step)
+
+glm.abs.res &lt;- glm(abs(residuals(glm.step))~fitted(glm.step))
+
+wts.step &lt;- 1/fitted(glm.abs.res)^2
+
+bdata.step.wls &lt;- bdata.step
+
+wls.step &lt;- glm(log_salary ~ ., data = bdata.step, weights=wts.step)
+
+bdata.step.wls$wts.step &lt;- wts.step
+
+cv.wls.step &lt;- cv.glm(bdata.step.wls, wls.step)</code></pre>
+<pre class="r"><code>cbind(&quot;WLS Share&quot; = cv.wls.share$delta, &quot;OLS Share&quot; = cv.share$delta,
+      &quot;WLS VIF&quot; = cv.wls.vif$delta, &quot;OLS VIF&quot; = cv.vif$delta,
+      &quot;WLS Step&quot; = cv.wls.step$delta, &quot;OLS Step&quot; = cv.step$delta)</code></pre>
+<pre><code>##      WLS Share  OLS Share    WLS VIF    OLS VIF  WLS Step   OLS Step
+## [1,] 0.0996637 0.07388424 0.09831567 0.07585092 0.1111178 0.07389762
+## [2,] 0.1024061 0.07388359 0.09790322 0.07584936 0.1127077 0.07389678</code></pre>
+<p>Traditional OLS using the Shared Features is still producing the best CV results</p>
+</div>
+<div id="regression-trees" class="section level2">
+<h2>Regression Trees</h2>
 </div>
 <div id="pieceise-model-ignore-this-for-now" class="section level2">
 <h2>Pieceise Model (Ignore this for now)</h2>
