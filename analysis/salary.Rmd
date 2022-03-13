@@ -140,8 +140,26 @@ bdata.log
 bdata.log$salary <- NULL
 ```
 
+
 ```{r}
-ols.log <- lm(log_salary ~ ., data = bdata.log)
+ols.log0 <- lm(log_salary ~ ., data = bdata.log)
+
+summary(ols.log0)
+
+plot(ols.log0, which = c(1, 2))
+
+# cond.index(ols.log, bdata.log)
+
+vif(ols.log0)
+```
+## Removing High Leverage Values (Outliers)
+
+```{r}
+bdata.log.rm <- bdata.log[-c(363, 774, 967), ]
+```
+
+```{r}
+ols.log <- lm(log_salary ~ ., data = bdata.log.rm)
 
 summary(ols.log)
 
@@ -151,6 +169,7 @@ plot(ols.log, which = c(1, 2))
 
 vif(ols.log)
 ```
+
 ## Feature Selection
 
 ```{r}
@@ -162,7 +181,7 @@ vif.1000
 
 drop.vars <- c(rownames(vif.1000))
 
-bdata.log %>%
+bdata.log.rm %>%
   select(-drop.vars) ->
 bdata.log2
 ```
@@ -249,7 +268,7 @@ bdata.vif <- bdata.log5
 ### Final Fitting
 
 ```{r}
-ols.log5 <- lm(log_salary ~ ., data = bdata.log5)
+ols.log5 <- lm(log_salary ~ ., data = bdata.vif)
 
 summary(ols.log5)
 
@@ -258,12 +277,13 @@ plot(ols.log5, which = c(1, 2))
 vif(ols.log5)
 ```
 
+
 ## Feature Selection Use Stepwise Function
 
 ```{r}
-fit.large <- lm(log_salary ~ ., data = bdata.log)
+fit.large <- lm(log_salary ~ ., data = bdata.log.rm)
 
-fit.small <- lm(log_salary ~ 1, data = bdata.log)
+fit.small <- lm(log_salary ~ 1, data = bdata.log.rm)
 
 fit.step <- step(fit.large, fit.small)
 ```
@@ -306,7 +326,7 @@ for (i in vars.step) {
 }
 vars.share
 
-bdata.log %>%
+bdata.log.rm %>%
   select(c(vars.share, log_salary)) ->
 bdata.share
 
@@ -345,7 +365,7 @@ cv.step <- cv.glm(bdata.step, ols.step)
 c("Shared" = cv.share$delta[1], "VIF" = cv.vif$delta[1], "Step" = cv.step$delta[1])
 ```
 
-The Shared data set actually had better cross validation results, though the set selected by step was quite close.
+The Shared data set actually had better cross validation results, though the set selected by VIF was quite close.
 
 ## Weighted Least Squares Regression
 
@@ -412,6 +432,11 @@ Traditional OLS using the Shared Features is still producing the best CV results
 
 ## Regression Trees
 
+```{r}
+library(tree)
+
+tree.share <- tree(log_salary ~ ., bdata.share)
+```
 
 
 
@@ -425,23 +450,5 @@ summary(fit.piecewise)
 plot(fit.piecewise, which = c(1, 2))
 ```
 
-
-### Ridge/LASSO
-
-### Feature Engineering
-
-## Modeling
-
-Possible Models:
-
-OLS Regression
-
-WLS Regression
-
-GLM Regression
-
-Regression Trees
-
-Splines
 
 
