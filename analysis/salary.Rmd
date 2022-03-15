@@ -412,7 +412,7 @@ cv.wls.share <- cv.glm(bdata.share.wls, wls.share)
 
 ```{r}
 # VIF Features
-glm.vif <- glm(log_salary ~ ., data= bdata.vif)
+glm.vif <- glm(log_salary ~ ., data = bdata.vif)
 
 glm.abs.res <- glm(abs(residuals(glm.vif)) ~ fitted(glm.vif))
 
@@ -430,7 +430,7 @@ cv.wls.vif <- cv.glm(bdata.vif.wls, wls.vif)
 ```{r}
 # Step Features
 
-glm.step <- glm(log_salary ~ ., data= bdata.step)
+glm.step <- glm(log_salary ~ ., data = bdata.step)
 
 glm.abs.res <- glm(abs(residuals(glm.step))~fitted(glm.step))
 
@@ -461,11 +461,11 @@ Traditional OLS using the Shared Features is still producing the best CV results
 ```{r}
 library(tree)
 
-tree.share <- tree(log_salary ~ ., bdata.share, mindev = .005)
+tree.share <- tree(log_salary ~ ., bdata.share, mindev = 0.0005)
 
-tree.vif <- tree(log_salary ~ ., bdata.vif)
+tree.vif <- tree(log_salary ~ ., bdata.vif, mindev = 0.0005)
 
-tree.step <- tree(log_salary ~ ., bdata.step)
+tree.step <- tree(log_salary ~ ., bdata.step, mindev = 0.0005)
 
 plot(tree.share)
 text(tree.share)
@@ -476,6 +476,121 @@ text(tree.vif)
 plot(tree.step)
 text(tree.step)
 ```
+### Pruning Share Tree
+```{r}
+cv.tree.share <- cv.tree(tree.share)
+
+min.dev.share <- min(cv.tree.share$dev)
+
+for (i in seq(length(cv.tree.share$dev))) {
+  if (cv.tree.share$dev[i] == min.dev.share) {
+    best.ind <- i
+  }
+}
+
+best.size <- cv.tree.share$size[best.ind]
+
+prune.share <- prune.tree(tree.share, best=best.size)
+
+summary(prune.share)
+plot(prune.share)
+text(prune.share, pretty=0)
+```
+
+### Pruning VIF Tree
+```{r}
+cv.tree.vif <- cv.tree(tree.vif)
+
+min.dev.vif <- min(cv.tree.vif$dev)
+
+for (i in seq(length(cv.tree.vif$dev))) {
+  if (cv.tree.vif$dev[i] == min.dev.vif) {
+    best.ind <- i
+  }
+}
+
+best.size <- cv.tree.vif$size[best.ind] 
+
+prune.vif <- prune.tree(tree.vif, best=best.size)
+
+summary(prune.vif)
+plot(prune.vif)
+text(prune.vif, pretty=0)
+```
+
+### Pruning Step Tree
+```{r}
+cv.tree.step <- cv.tree(tree.step)
+
+min.dev.step <- min(cv.tree.step$dev)
+
+for (i in seq(length(cv.tree.step$dev))) {
+  if (cv.tree.step$dev[i] == min.dev.step) {
+    best.ind <- i
+  }
+}
+
+best.size <- cv.tree.step$size[best.ind]
+best.size
+
+prune.step <- prune.tree(tree.step, best=best.size)
+
+summary(prune.step)
+plot(prune.step)
+text(prune.step, pretty=0)
+```
+### Tree CV Results
+```{r}
+cbind("Tree Share" = min.dev.share, "Tree VIF" = min.dev.vif, "Tree Step" = min.dev.step)
+```
+
+The VIF Feature set gives us the best performing Regression Tree
+
+# Using CV to Determine the Best model
+
+So far, the best modeling results have been OLS using the Step Feature Set, and Regression Trees using the VIF Feature set.
+
+Let's compare this 2 models using manual cross validation
+
+```{r}
+cv <- function(t, r, s = 1) {
+  
+  tree.results <- c()
+  ols.results <- c()
+  
+  for (i in 1:r) {
+    set.seed(s - i + 1)
+    train = sample(1:nrow(bdata.share), t*nrow(bdata.share))
+  
+    new.tree.vif <- tree(log_salary ~ ., bdata.vif[train,])
+    pred.tree <- predict(new.tree.vif, newdata = bdata.vif[-train,]) 
+    vif.test <- bdata.vif[-train, "log_salary"]
+    tree.cv <- mean(c(((pred.tree - vif.test)^2)[[1]]))
+  
+    new.ols.step <- lm(log_salary ~ ., bdata.step[train,])
+    pred.ols <- predict(new.ols.step, newdata = bdata.step[-train,])
+    step.test <- bdata.step[-train, "log_salary"]
+    ols.cv <- mean(c(((pred.ols - step.test)^2)[[1]]))
+    
+    tree.results <- c(tree.results, tree.cv)
+    ols.results <- c(ols.results, ols.cv)
+  }
+  
+  
+  cbind("Tree" = mean(tree.results), "OLS" = mean(ols.results))
+}
+
+cv(0.7, 1000, 2000)
+```
+Compare Using K folds CV
+
+
+```{r}
+library(caret)
+```
+
+
+
 
 # Feature Sets Summary
 
