@@ -95,7 +95,8 @@ bdata.raw %>%
          FT_P = `FT%`) %>%
   select(-birthDate, -birthPlace, -college, -draft_team, -highSchool, -name.x,
          -position.x, -position.y, -team, -Player, -name.y, -season, -Tm,
-         -`career_FG3%`, -`career_FG%`, -`career_FT%`, -shoots) %>%
+         # rank removed
+         -`career_FG3%`, -`career_FG%`, -`career_FT%`, -shoots, -rank) %>%
   na.omit() ->
 bdata.clean
 
@@ -103,7 +104,7 @@ bdata.clean %>%
   select(-`_id`) ->
 bdata.model
 ```
-
+We chose not to use rank as a predictor
 
 
 ## Transforming the Response Variable
@@ -118,14 +119,6 @@ plot(ols.init, which = 1)
 plot(ols.init, which = 2)
 ```
 
-```{r, message=FALSE}
-# library(klaR)
-library(car)
-
-# cond.index(ols.init, bdata.model)
-
-vif(ols.init)
-```
 
 
 ```{r}
@@ -135,7 +128,8 @@ bdata.log
 
 bdata.log$salary <- NULL
 ```
- 
+
+## Removing Outliers
 
 ```{r}
 ols.log0 <- lm(log_salary ~ ., data = bdata.log)
@@ -144,15 +138,16 @@ summary(ols.log0)
 
 plot(ols.log0, which = c(1, 2))
 
-# cond.index(ols.log, bdata.log)
+library(car)
 
 vif(ols.log0)
 ```
-## Removing High Leverage Values (Outliers)
-
 ```{r}
-bdata.log.rm <- bdata.log[-c(363, 774, 967), ]
+outlierTest(ols.log0)
+
+bdata.log.rm <- bdata.log[-c(774, 967, 195, 363),]
 ```
+
 
 ```{r}
 ols.log <- lm(log_salary ~ ., data = bdata.log.rm)
@@ -193,6 +188,8 @@ plot(ols.log2, which = c(1, 2))
 
 vif(ols.log2)
 ```
+
+
 ```{r}
 vifs2 <- data.frame(vif(ols.log2))
 
@@ -200,9 +197,9 @@ vifs2 %>%
   filter(GVIF > 50) ->
 vif.50
 
-drop.vars <- c(rownames(vif.50))
+drop.vars <- c(drop.vars, rownames(vif.50))
 
-bdata.log2 %>%
+bdata.log.rm %>%
   select(-drop.vars) ->
 bdata.log3
 ```
@@ -219,6 +216,7 @@ plot(ols.log3, which = c(1, 2))
 vif(ols.log3)
 ```
 
+
 ```{r}
 vifs3 <- data.frame(vif(ols.log3))
 
@@ -226,9 +224,9 @@ vifs3 %>%
   filter(GVIF > 20) ->
 vif.20
 
-drop.vars <- c(rownames(vif.20))
+drop.vars <- c(drop.vars, rownames(vif.20))
 
-bdata.log3 %>%
+bdata.log.rm %>%
   select(-drop.vars) ->
 bdata.log4
 ```
@@ -252,25 +250,54 @@ vifs4 %>%
   filter(`vif.ols.log4.` > 12) ->
 vif.12
 
-drop.vars <- c(rownames(vif.12))
+drop.vars <- c(drop.vars, rownames(vif.12))
 
-bdata.log4 %>%
+bdata.log.rm %>%
   select(-drop.vars) ->
 bdata.log5
-
-bdata.vif <- bdata.log5
 ```
 
 #### VIF Final Fitting
 
 ```{r}
-ols.log5 <- lm(log_salary ~ ., data = bdata.vif)
+ols.log5 <- lm(log_salary ~ ., data = bdata.log5)
 
 summary(ols.log5)
 
 plot(ols.log5, which = c(1, 2))
 
 vif(ols.log5)
+```
+### Removing High Leverage Values
+
+```{r}
+high.lev <- c()
+for (i in seq(length(hatvalues(ols.log5)))) {
+  if (hatvalues(ols.log5)[i] > 2*mean(hatvalues(ols.log5))){
+    high.lev <- c(high.lev, i)
+  }
+}
+
+bdata.log.rm <- bdata.log.rm[-high.lev,]
+
+bdata.log.rm %>%
+  select(-drop.vars) ->
+bdata.vif
+```
+
+#### VIF FINAL Final Fitting
+
+```{r}
+ols.vif <- lm(log_salary ~ ., data = bdata.vif)
+
+summary(ols.vif)
+
+plot(ols.vif, which = c(1, 2))
+
+vif(ols.vif)
+```
+```{r}
+outlierTest(ols.vif)
 ```
 
 
@@ -288,10 +315,9 @@ fit.step <- step(fit.large, fit.small)
 
 ```{r}
 vars.vif <- names(vif(ols.log5))
-bdata.vif <- bdata.log5
 
 vars.step <- names(fit.step$coefficients)[-1]
-bdata.log %>%
+bdata.log.rm %>%
   select(c(vars.step, log_salary)) ->
 bdata.step
 ```
@@ -301,7 +327,9 @@ bdata.step
 Let's do an anova on the ols model fitting all features and the 2 feature set models
 
 ```{r}
-anova(ols.log, ols.log5)
+ols.log <- lm(log_salary ~ ., data = bdata.log.rm)
+
+anova(ols.log, ols.vif)
 
 anova(ols.log, fit.step)
 ```
@@ -327,13 +355,12 @@ bdata.log.rm %>%
   select(c(vars.share, log_salary)) ->
 bdata.share
 
-ols.share <- lm(log_salary ~ career_PER + career_PTS + career_TRB + career_WS + 
-    draft_round + draft_year + rank + G + TWOP_P + AST + TOV + PF + year, data = bdata.share)
+ols.share <- lm(log_salary ~ ., data = bdata.share)
 
 
 anova(ols.share, fit.step)
 
-anova(ols.share, ols.log5)
+anova(ols.share, ols.vif)
 ```
 
 The step variables model has slight significant anova results, but not by much.
@@ -342,7 +369,7 @@ The vif variable models is not significantly better than the shared model
 
 Let's do CV on the step, vif, and shared feature subsets to see which is the best at prediction
 
-### Cross Validation between Feature Sets
+### Cross Validation between Feature Sets using Leave One Out
 
 ```{r}
 library(boot)
@@ -418,7 +445,7 @@ bdata.step.wls$wts.step <- wts.step
 cv.wls.step <- cv.glm(bdata.step.wls, wls.step)
 ```
 
-### CV Results between Models and Feature Sets
+### CV Results between Models and Feature Sets using Leave One Out
 
 ```{r}
 cbind("WLS Share" = cv.wls.share$delta, "OLS Share" = cv.share$delta,
@@ -434,9 +461,20 @@ Traditional OLS using the Shared Features is still producing the best CV results
 ```{r}
 library(tree)
 
-tree.share <- tree(log_salary ~ ., bdata.share)
+tree.share <- tree(log_salary ~ ., bdata.share, mindev = .005)
 
-# cv.tree(tree.share, k = nrow(bdata.share))
+tree.vif <- tree(log_salary ~ ., bdata.vif)
+
+tree.step <- tree(log_salary ~ ., bdata.step)
+
+plot(tree.share)
+text(tree.share)
+
+plot(tree.vif)
+text(tree.vif)
+
+plot(tree.step)
+text(tree.step)
 ```
 
 # Feature Sets Summary
@@ -455,39 +493,51 @@ vars.vif
 OLS with the Shared Feature set was the model with the best CV results
 
 ```{r}
-summary(ols.share)
+summary(ols.step)
+
+plot(ols.share, which = c(1, 2))
 ```
 
 ## Should We Remove the insignificant variables?
 
 ```{r}
-bdata.share %>%
-  select(-TWOP_P, -career_PTS, -career_TRB, -career_FG3_P, -career_eFG_P, -BLK) ->
-bdata.share2
+bdata.step %>%
+  select(-draft_pick, -Age, -G, -BLK) ->
+bdata.step2
 
-ols.share2 <- glm(log_salary ~ ., data = bdata.share2)
+ols.step2 <- glm(log_salary ~ ., data = bdata.step2)
 
-lm.share <- lm(log_salary ~ ., data = bdata.share)
-lm.share2 <- lm(log_salary ~ ., data = bdata.share2)
+lm.step <- lm(log_salary ~ ., data = bdata.step)
+lm.step2 <- lm(log_salary ~ ., data = bdata.step2)
 
 
-anova(lm.share2, lm.share)
+anova(lm.step2, lm.step)
 
-cv.ols.share2 <- cv.glm(bdata.share2, ols.share2)
+cv.ols.step2 <- cv.glm(bdata.step2, ols.step2)
 
-cbind("Share" = cv.share$delta, "Share2" = cv.share$delta)
+cbind("Step" = cv.step$delta, "Step2" = cv.ols.step2$delta)
 ```
 
-The OLS fit on the smaller subset of the shared features, with the insignificant predictors removed, has the exact same CV results as the OLS fit on the fully shared features.
+The ANOVA test gives us significant results, this indicates using the larger dataset.
 
-Since the ANOVA test is insignificant, the simpler model is preferred.
+Additionally, the larger data set cross validates better. We will keep the insignificant variables in.
 
 # Final Model
+```{r}
+# library(lmtest)
+# 
+# bptest(ols.share2, data = bdata.share)
+```
 
 ```{r}
-summary(ols.share2)
+# outlierTest(ols.share2)
+```
 
-plot(ols.share2, which = c(1,2))
+
+```{r}
+summary(ols.step)
+
+plot(ols.step, which = c(1,2))
 ```
 
 
