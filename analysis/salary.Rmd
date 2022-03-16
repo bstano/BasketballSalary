@@ -9,13 +9,13 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Baseketballs Brooooo
+# Baseketballs Salary
 
 ```{r, message=FALSE}
 library(tidyverse)
 ```
 
-## Importing Data
+# Importing Data
 
 ```{r}
 # players <- read_csv("../data/players.csv")
@@ -26,7 +26,7 @@ library(tidyverse)
 # salary2 <- read_csv("../data/nba-salaries.csv")
 ```
 
-## Cleaning and Merging Data
+# Cleaning and Merging Data
 
 ```{r}
 # stats.g <- stats.g %>%
@@ -37,7 +37,7 @@ library(tidyverse)
 #   mutate(key = str_c(name, as.character(season), sep = ""))
 ```
 
-### Joining the Datasets
+## Joining the Datasets
 
 ```{r}
 # final.data <- players %>%
@@ -51,7 +51,7 @@ library(tidyverse)
 bdata.raw <- read_csv("../data/final_data.csv")
 ```
 
-### Cleaning the Data
+## Cleaning the Data
 
 ```{r}
 bdata.raw <- read_csv("../data/final_data.csv")
@@ -104,10 +104,11 @@ bdata.clean %>%
   select(-`_id`) ->
 bdata.model
 ```
+
 We chose not to use rank as a predictor
 
 
-## Transforming the Response Variable
+# Transforming the Response Variable
 
 ```{r}
 ols.init <- lm(salary ~ ., data = bdata.model)
@@ -119,7 +120,7 @@ plot(ols.init, which = 1)
 plot(ols.init, which = 2)
 ```
 
-
+The relationship between the response and the predictors is clearly curved
 
 ```{r}
 bdata.model %>%
@@ -129,7 +130,6 @@ bdata.log
 bdata.log$salary <- NULL
 ```
 
-## Removing Outliers
 
 ```{r}
 ols.log0 <- lm(log_salary ~ ., data = bdata.log)
@@ -142,12 +142,18 @@ library(car)
 
 vif(ols.log0)
 ```
+
+# Feature Selection and Outlier Removal
+
+## Removing Outliers using `outlierTest()`
+
 ```{r}
 outlierTest(ols.log0)
 
 bdata.log.rm <- bdata.log[-c(774, 967, 195, 363),]
 ```
 
+## Feature Selection Using VIF
 
 ```{r}
 ols.log <- lm(log_salary ~ ., data = bdata.log.rm)
@@ -156,12 +162,9 @@ summary(ols.log)
 
 plot(ols.log, which = c(1, 2))
 
-# cond.index(ols.log, bdata.log)
-
 vif(ols.log)
 ```
 
-## Feature Selection Through VIF
 
 ```{r}
 vifs <- data.frame(vif(ols.log))
@@ -177,7 +180,7 @@ bdata.log.rm %>%
 bdata.log2
 ```
 
-#### VIF Refitting
+### VIF Fit 2
 
 ```{r}
 ols.log2 <- lm(log_salary ~ ., data = bdata.log2)
@@ -204,7 +207,7 @@ bdata.log.rm %>%
 bdata.log3
 ```
 
-#### VIF Refitting Again
+### VIF Fit 3
 
 ```{r}
 ols.log3 <- lm(log_salary ~ ., data = bdata.log3)
@@ -231,7 +234,7 @@ bdata.log.rm %>%
 bdata.log4
 ```
 
-#### VIF Refitting AGAIN AGAIN
+### VIF Fit 4
 
 ```{r}
 ols.log4 <- lm(log_salary ~ ., data = bdata.log4)
@@ -257,7 +260,7 @@ bdata.log.rm %>%
 bdata.log5
 ```
 
-#### VIF Final Fitting
+### VIF Fit 5
 
 ```{r}
 ols.log5 <- lm(log_salary ~ ., data = bdata.log5)
@@ -268,7 +271,8 @@ plot(ols.log5, which = c(1, 2))
 
 vif(ols.log5)
 ```
-### Removing High Leverage Values
+
+## Removing High Leverage Outliers
 
 ```{r}
 high.lev <- c()
@@ -285,7 +289,7 @@ bdata.log.rm %>%
 bdata.vif
 ```
 
-#### VIF FINAL Final Fitting
+### VIF Final Fit
 
 ```{r}
 ols.vif <- lm(log_salary ~ ., data = bdata.vif)
@@ -295,9 +299,6 @@ summary(ols.vif)
 plot(ols.vif, which = c(1, 2))
 
 vif(ols.vif)
-```
-```{r}
-outlierTest(ols.vif)
 ```
 
 
@@ -311,7 +312,7 @@ fit.small <- lm(log_salary ~ 1, data = bdata.log.rm)
 fit.step <- step(fit.large, fit.small)
 ```
 
-### Two Feature Sets
+## Handling the `VIF` and `Step` Feature Sets
 
 ```{r}
 vars.vif <- names(vif(ols.log5))
@@ -336,7 +337,7 @@ anova(ols.log, fit.step)
 
 Both models are not significant worse than the model fit on all predictors
 
-### Creating the Shared Feature Set
+## Creating the `Shared` Feature Set
 
 Let's do another anova on the feature set models and a small model fit only on the predictors they share
 
@@ -363,13 +364,15 @@ anova(ols.share, fit.step)
 anova(ols.share, ols.vif)
 ```
 
-The step variables model has slight significant anova results, but not by much.
+The `Step` feature set model has slight significant anova results, but not by much.
 
-The vif variable models is not significantly better than the shared model
+The `VIF` variable models is not significantly better than the shared model
 
-Let's do CV on the step, vif, and shared feature subsets to see which is the best at prediction
+Let's do CV on the `Step`, `VIF`, and `Shared` feature subsets to see which is the best at prediction
 
-### Cross Validation between Feature Sets using Leave One Out
+# OLS Regression and Cross Validation on Each Feature Set
+
+Here we will use Leave One Out Cross Validation
 
 ```{r}
 library(boot)
@@ -389,9 +392,9 @@ cv.step <- cv.glm(bdata.step, ols.step)
 c("Shared" = cv.share$delta[1], "VIF" = cv.vif$delta[1], "Step" = cv.step$delta[1])
 ```
 
-The Shared data set actually had better cross validation results, though the set selected by VIF was quite close.
+The OLS using the `Step` feature set has the best cross validation results. Well will keep this the mind as the best model moving forward.
 
-## Weighted Least Squares Regression
+# Weighted Least Squares Regression
 
 ```{r}
 # Shares Features
@@ -445,7 +448,7 @@ bdata.step.wls$wts.step <- wts.step
 cv.wls.step <- cv.glm(bdata.step.wls, wls.step)
 ```
 
-### CV Results between Models and Feature Sets using Leave One Out
+## CV Results between Models and Feature Sets using Leave One Out
 
 ```{r}
 cbind("WLS Share" = cv.wls.share$delta, "OLS Share" = cv.share$delta,
@@ -453,10 +456,9 @@ cbind("WLS Share" = cv.wls.share$delta, "OLS Share" = cv.share$delta,
       "WLS Step" = cv.wls.step$delta, "OLS Step" = cv.step$delta)
 ```
 
+Traditional OLS Regression using the `Step` Features is still producing the best CV results
 
-Traditional OLS using the Shared Features is still producing the best CV results
-
-## Regression Trees
+# Regression Trees
 
 ```{r}
 library(tree)
@@ -476,7 +478,11 @@ text(tree.vif)
 plot(tree.step)
 text(tree.step)
 ```
-### Pruning Share Tree
+
+Our trees are overly complicated. Let's prune the tree of each feature set to it's minimum deviance.
+
+## Pruning Share Tree
+
 ```{r}
 cv.tree.share <- cv.tree(tree.share)
 
@@ -497,7 +503,8 @@ plot(prune.share)
 text(prune.share, pretty=0)
 ```
 
-### Pruning VIF Tree
+## Pruning VIF Tree
+
 ```{r}
 cv.tree.vif <- cv.tree(tree.vif)
 
@@ -518,7 +525,8 @@ plot(prune.vif)
 text(prune.vif, pretty=0)
 ```
 
-### Pruning Step Tree
+## Pruning Step Tree
+
 ```{r}
 cv.tree.step <- cv.tree(tree.step)
 
@@ -539,16 +547,19 @@ summary(prune.step)
 plot(prune.step)
 text(prune.step, pretty=0)
 ```
-### Tree CV Results
+
+## Tree CV Results
 ```{r}
 cbind("Tree Share" = min.dev.share, "Tree VIF" = min.dev.vif, "Tree Step" = min.dev.step)
 ```
 
-The VIF Feature set gives us the best performing Regression Tree
+The `Step` Feature set gives us the best performing Regression Tree
 
 # Using CV to Determine the Best model
 
 So far, the best modeling results have been OLS using the Step Feature Set, and Regression Trees using the VIF Feature set.
+
+## Compare Using Manual CV
 
 Let's compare this 2 models using manual cross validation
 
@@ -562,10 +573,10 @@ cv <- function(t, r, s = 1) {
     set.seed(s - i + 1)
     train = sample(1:nrow(bdata.share), t*nrow(bdata.share))
   
-    new.tree.vif <- tree(log_salary ~ ., bdata.vif[train,])
-    pred.tree <- predict(new.tree.vif, newdata = bdata.vif[-train,]) 
-    vif.test <- bdata.vif[-train, "log_salary"]
-    tree.cv <- mean(c(((pred.tree - vif.test)^2)[[1]]))
+    new.tree.step <- tree(log_salary ~ ., bdata.step[train,])
+    pred.tree <- predict(new.tree.step, newdata = bdata.step[-train,]) 
+    step.test <- bdata.step[-train, "log_salary"]
+    tree.cv <- mean(c(((pred.tree - step.test)^2)[[1]]))
   
     new.ols.step <- lm(log_salary ~ ., bdata.step[train,])
     pred.ols <- predict(new.ols.step, newdata = bdata.step[-train,])
@@ -582,14 +593,45 @@ cv <- function(t, r, s = 1) {
 
 cv(0.7, 1000, 2000)
 ```
-Compare Using K folds CV
+
+OLS has won out against regression trees here.
+
+## Compare Using 10 Folds Cross Validatiion
 
 
 ```{r}
-library(caret)
+set.seed(500)
+
+bdata.step.sample <- bdata.step[sample(nrow(bdata.step)),]
+
+folds <- cut(seq(1,nrow(bdata.step.sample)),breaks=10,labels=FALSE)
+
+cv.ols <- c()
+cv.tree <- c()
+
+for (i in 1:10) {
+  testInd <- which(folds==i,arr.ind=TRUE)
+  testData <- bdata.step.sample[testInd, ]
+  trainData <- bdata.step.sample[-testInd, ]
+  
+  step.test <- testData[, "log_salary"]
+  
+  new.ols.step <- lm(log_salary ~ ., data = trainData)
+  ols.pred <- predict(new.ols.step, newdata = testData)
+  ols.cv <- mean(c(((ols.pred - step.test)^2)[[1]]))
+  
+  new.tree.step <- tree(log_salary ~ ., data = trainData)
+  tree.pred <- predict(new.tree.step, newdata = testData)
+  tree.cv <- mean(c(((tree.pred - step.test)^2)[[1]]))
+  
+  cv.ols <- c(cv.ols, ols.cv)
+  cv.tree <- c(cv.tree, tree.cv)
+}
+
+cbind("OLS" = mean(cv.ols), "Tree" = mean(cv.tree))
 ```
 
-
+Once again, the OLS model performs better than Regression Trees
 
 
 # Feature Sets Summary
@@ -633,21 +675,11 @@ cv.ols.step2 <- cv.glm(bdata.step2, ols.step2)
 cbind("Step" = cv.step$delta, "Step2" = cv.ols.step2$delta)
 ```
 
-The ANOVA test gives us significant results, this indicates using the larger dataset.
+The ANOVA test gives us significant results, this indicates using the larger feature set.
 
 Additionally, the larger data set cross validates better. We will keep the insignificant variables in.
 
 # Final Model
-```{r}
-# library(lmtest)
-# 
-# bptest(ols.share2, data = bdata.share)
-```
-
-```{r}
-# outlierTest(ols.share2)
-```
-
 
 ```{r}
 summary(ols.step)
