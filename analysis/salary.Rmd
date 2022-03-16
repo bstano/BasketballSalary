@@ -1,6 +1,6 @@
 ---
-title: "Basketball Salary"
-author: "Ben Stano, ADD NAMES"
+title: "Predicting NBA Salary"
+author: "Ben Stano, Addy Lai, Prav Mahadevan, Nick Oggero"
 date: "2/16/2022"
 output: html_document
 ---
@@ -9,13 +9,13 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Baseketballs Salary
+# Predicting NBA Salary
 
-```{r, message=FALSE}
-library(tidyverse)
-```
+We will evaluate the key aspects of player NBA performance that can be used to predict salary. We will accomplish this by modeling player salary.
 
 # Importing Data
+
+Our data has been source from Kaggle and can be found (here)[https://www.kaggle.com/adityak2003/college-basketball-players-20092021]
 
 ```{r}
 # players <- read_csv("../data/players.csv")
@@ -28,7 +28,10 @@ library(tidyverse)
 
 # Cleaning and Merging Data
 
-```{r}
+The data was in separate tables. These tables need to be merged and formatted correctly
+
+```{r, message = FALSE}
+library(tidyverse)
 # stats.g <- stats.g %>%
 #   mutate(name = str_replace(Player, "\\*", ""))
 # stats.g <- stats.g %>%
@@ -105,7 +108,7 @@ bdata.clean %>%
 bdata.model
 ```
 
-We chose not to use rank as a predictor
+We chose not to use rank as a predictor, even though it has mostly non-NA values. A given player rank is essentially the same as what we are trying to predict, so using it would bias our results. 
 
 
 # Transforming the Response Variable
@@ -120,7 +123,7 @@ plot(ols.init, which = 1)
 plot(ols.init, which = 2)
 ```
 
-The relationship between the response and the predictors is clearly curved
+The relationship between the response, salary, and the predictors is clearly curved. To remedy this, we will log-transform salary.
 
 ```{r}
 bdata.model %>%
@@ -145,7 +148,11 @@ vif(ols.log0)
 
 # Feature Selection and Outlier Removal
 
+The data set contains too many features and as such is suffering dimensional issues. Additionally, outliers have skewed our results made our model far too Heteroscedastic. 
+
 ## Removing Outliers using `outlierTest()`
+
+We can remove the worst ourliers by idenfiying them with the `outlierTest()` function.
 
 ```{r}
 outlierTest(ols.log0)
@@ -154,6 +161,8 @@ bdata.log.rm <- bdata.log[-c(774, 967, 195, 363),]
 ```
 
 ## Feature Selection Using VIF
+
+On way we can approach dimentionality reduction is by removing features with a high Variance Inflation Factor (VIF).
 
 ```{r}
 ols.log <- lm(log_salary ~ ., data = bdata.log.rm)
@@ -260,7 +269,9 @@ bdata.log.rm %>%
 bdata.log5
 ```
 
-### VIF Fit 5
+### VIF Final Fit
+
+Here is the final final of the features selected using VIF. We will refer to this as the `VIF` feature set.
 
 ```{r}
 ols.log5 <- lm(log_salary ~ ., data = bdata.log5)
@@ -273,6 +284,8 @@ vif(ols.log5)
 ```
 
 ## Removing High Leverage Outliers
+
+We can further remove extreme datapoints by removing high leverage values.
 
 ```{r}
 high.lev <- c()
@@ -289,7 +302,7 @@ bdata.log.rm %>%
 bdata.vif
 ```
 
-### VIF Final Fit
+### VIF Final Fit (High Leverage Removed)
 
 ```{r}
 ols.vif <- lm(log_salary ~ ., data = bdata.vif)
@@ -304,6 +317,8 @@ vif(ols.vif)
 
 ## Feature Selection Use Stepwise Function
 
+Another way we can select features is by using `step()`.
+
 ```{r}
 fit.large <- lm(log_salary ~ ., data = bdata.log.rm)
 
@@ -311,6 +326,8 @@ fit.small <- lm(log_salary ~ 1, data = bdata.log.rm)
 
 fit.step <- step(fit.large, fit.small)
 ```
+
+We will refer to this feature set as the `Step` feature set from now on.
 
 ## Handling the `VIF` and `Step` Feature Sets
 
@@ -325,7 +342,7 @@ bdata.step
 
 ## Validating Between the Feature Sets
 
-Let's do an anova on the ols model fitting all features and the 2 feature set models
+Let's do an anova test on the OLS model fitting all features and the 2 feature set models
 
 ```{r}
 ols.log <- lm(log_salary ~ ., data = bdata.log.rm)
@@ -335,11 +352,11 @@ anova(ols.log, ols.vif)
 anova(ols.log, fit.step)
 ```
 
-Both models are not significant worse than the model fit on all predictors
+Both models are not significantly worse than the model fit on all predictors
 
 ## Creating the `Shared` Feature Set
 
-Let's do another anova on the feature set models and a small model fit only on the predictors they share
+Let's do another anova on the feature set models and a small model fit only on the predictors they share.
 
 ```{r}
 vars.share <- c()
@@ -363,6 +380,8 @@ anova(ols.share, fit.step)
 
 anova(ols.share, ols.vif)
 ```
+
+This new set of features will be called the `Shared` feature set.
 
 The `Step` feature set model has slight significant anova results, but not by much.
 
@@ -395,6 +414,8 @@ c("Shared" = cv.share$delta[1], "VIF" = cv.vif$delta[1], "Step" = cv.step$delta[
 The OLS using the `Step` feature set has the best cross validation results. Well will keep this the mind as the best model moving forward.
 
 # Weighted Least Squares Regression
+
+Let's now fit a model using WLS Regression on each of the feature sets, and see if any perform better than OLS Regression.
 
 ```{r}
 # Shares Features
@@ -460,6 +481,8 @@ Traditional OLS Regression using the `Step` Features is still producing the best
 
 # Regression Trees
 
+Let's now try another modeling method, Regression Trees, again using each feature set.
+
 ```{r}
 library(tree)
 
@@ -484,6 +507,8 @@ Our trees are overly complicated. Let's prune the tree of each feature set to it
 ## Pruning Share Tree
 
 ```{r}
+set.seed(1)
+
 cv.tree.share <- cv.tree(tree.share)
 
 min.dev.share <- min(cv.tree.share$dev)
@@ -506,6 +531,8 @@ text(prune.share, pretty=0)
 ## Pruning VIF Tree
 
 ```{r}
+set.seed(1)
+
 cv.tree.vif <- cv.tree(tree.vif)
 
 min.dev.vif <- min(cv.tree.vif$dev)
@@ -528,6 +555,8 @@ text(prune.vif, pretty=0)
 ## Pruning Step Tree
 
 ```{r}
+set.seed(1)
+
 cv.tree.step <- cv.tree(tree.step)
 
 min.dev.step <- min(cv.tree.step$dev)
@@ -557,11 +586,11 @@ The `Step` Feature set gives us the best performing Regression Tree
 
 # Using CV to Determine the Best model
 
-So far, the best modeling results have been OLS using the Step Feature Set, and Regression Trees using the VIF Feature set.
+So far, the best modeling results have been `OLS` using the Step Feature Set, and Regression Trees using the `Step` Feature set.
 
 ## Compare Using Manual CV
 
-Let's compare this 2 models using manual cross validation
+Let's compare Regresion Tree and OLS models using manual cross validation.
 
 ```{r}
 cv <- function(t, r, s = 1) {
@@ -633,8 +662,9 @@ cbind("OLS" = mean(cv.ols), "Tree" = mean(cv.tree))
 
 Once again, the OLS model performs better than Regression Trees
 
-
 # Feature Sets Summary
+
+Here is a print out of the features within each feature set. Of course, the `Step` feature set appeared to be the most effective.
 
 ```{r}
 print("Shared Features")
@@ -656,6 +686,8 @@ plot(ols.share, which = c(1, 2))
 ```
 
 ## Should We Remove the insignificant variables?
+
+We can see that some of the predictors in the model are not significant. But should we removed them? Or does controlling for them improve the model? Let's find out using CV.
 
 ```{r}
 bdata.step %>%
